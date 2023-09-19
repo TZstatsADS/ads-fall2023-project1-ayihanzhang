@@ -1,0 +1,109 @@
+---
+title: "GR5243 Project 1 (Yihan Zhang)"
+output: html_notebook
+---
+
+```{r include=FALSE, echo=FALSE}
+library(word2vec)
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(uwot)
+library(udpipe)
+library(readr)
+library(tm)
+library(topicmodels)
+```
+
+```{r include=FALSE, echo=FALSE}
+# Load 2 data set required
+cleaned_df<-read.csv("/Users/fiona/Documents/GitHub/ads-fall2023-project1-ayihanzhang/data/cleaned_hm.csv")
+demo_df<-read.csv("/Users/fiona/Documents/GitHub/ads-fall2023-project1-ayihanzhang/data/demographic.csv")
+
+# merge 2 data set
+merged_df<-merge(cleaned_df,demo_df)
+
+# Select only useful column for following operations
+df<-merged_df%>%select(cleaned_hm, parenthood)
+```
+
+
+
+### Topic of Project
+#### Impact of shopping on happiness among different parenthood categories.
+```{r include=FALSE, echo=FALSE}
+# Convert all characters into lower cases
+lower_text<-tolower(df$cleaned_hm)
+```
+
+
+
+### Analysis Processes (Parenthood)
+We can use word2vec model in the Nature Language Processing to analyze the contents of different text based on their potential theme. To use word2vec model, according to Claire's tutorial, we need to lemmatize the cleaned_hm text with regard to speech tag of each word (verb, adverb, noun, adjective). The detailed process can be refer to the process_data function in tutorial by Claire He.
+```{r echo=FALSE,results='hide'}
+# This function is referred to the process_data function in tutorial by Claire He
+process_text <- function(x, n_topics){
+  anno <- udpipe(x, "english", trace = 5000, parallel.cores = 1)
+  anno <- subset(anno, !is.na(lemma) & nchar(lemma) > 1 & !upos %in% "PUNCT")
+  anno$text <- sprintf("%s--%s", anno$lemma, anno$upos)
+  x <- paste.data.frame(anno, term = "text", group = "doc_id", collapse = " ")
+  model <- word2vec(x = x$text, dim = n_topics, iter = 20, split = c(" ", ".\n?!"))
+  embedding <- as.matrix(model)
+
+  viz <- umap(embedding, n_neighbors = 15, n_threads = 2)
+  rownames(viz) <- rownames(embedding)
+
+  df <- data.frame(word = gsub("--.+", "", rownames(viz)),
+  upos = gsub(".+--", "", rownames(viz)),
+  x = viz[, 1], y = viz[, 2],
+  stringsAsFactors = FALSE)
+  df <- subset(df, upos %in% c("ADJ", "NOUN"))
+  return(list('data'=df,'model'=model))
+}
+```
+
+Based on the column of parenthood, we can divide the clean_hm data set to two groups, and build models for each data set.
+```{r, include=FALSE, echo=FALSE}
+lower_text_y<-tolower(subset(df, df$parenthood=='y')$cleaned_hm)
+lower_text_n<-tolower(subset(df, df$parenthood=='n')$cleaned_hm)
+
+l_y<-process_text(lower_text_y, 10)
+l_n<-process_text(lower_text_n, 10)
+```
+
+After constructing the model based on new data set. We want to find words that most likely related to shopping, and them use them to compare with the most similar words with happiness for the two groups of people.
+```{r, include=FALSE, echo=FALSE}
+lower_text_y<-tolower(subset(df, df$parenthood=='y')$cleaned_hm)
+lower_text_n<-tolower(subset(df, df$parenthood=='n')$cleaned_hm)
+
+l_y<-process_text(lower_text_y, 10)
+l_n<-process_text(lower_text_n, 10)
+
+word_shopping_y <- predict(l_y$model, c("shopping--NOUN"), type = "nearest", top_n = 10)$`shopping--NOUN`$term2
+word_happiness_y <- predict(l_y$model, c("happy--ADJ"), type = "nearest", top_n = 40)$`happy--ADJ`$term2
+
+word_shopping_n <- predict(l_n$model, c("shopping--NOUN"), type = "nearest", top_n = 10)$`shopping--NOUN`$term2
+word_happiness_n <- predict(l_n$model, c("happy--ADJ"), type = "nearest", top_n = 40)$`happy--ADJ`$term2
+
+shopping_y <- subset(l_y$data, rownames(l_y$data) %in% word_shopping_y)
+happiness_y <- subset(l_y$data, rownames(l_y$data) %in% word_happiness_y)
+shopping_n <- subset(l_n$data, rownames(l_n$data) %in% word_shopping_n)
+happiness_n <- subset(l_n$data, rownames(l_n$data) %in% word_happiness_n)
+```
+
+Furthermore, we can plot the words using the coordinate given by the models, and hence we can visulize the relationship between words of "shopping" and "happiness".
+```{r warning=FALSE, echo=FALSE}
+options(ggrepel.max.overlaps = Inf) 
+ggplot(data=shopping_y, aes(x = x, y = y, label = word, color='red')) +
+geom_text_repel() + geom_text_repel(data=happiness_y, aes(x=x, y=y, label=word, color='orange'))+
+geom_text_repel() + geom_text_repel(data=happiness_n, aes(x=x, y=y, label=word, color='brown'))+
+geom_text_repel() + geom_text_repel(data=shopping_n, aes(x=x, y=y, label=word, color='blue'))+ scale_color_manual(values=c("red", "orange", "brown", 'blue'),
+                          labels = c("parent - shopping", "not parent - shopping", "not parent - happiness", 'parent - happiness'))+
+labs(title = "Most similar words to shopping and happy")
+save.image('/Users/fiona/Documents/GitHub/ads-fall2023-project1-ayihanzhang/figs/general_w2v.png')
+```
+### Conclusion
+
+For people who are parent, we cna see that the clusters between happiness and shopping are distinct, which means the relationship between their happiness and potential activities of shopping are not strong. Moreover, based on the distance between two clusters in the non-parent group, we can also conclude that the correlation between happiness and possible actions of shopping is low.
+
