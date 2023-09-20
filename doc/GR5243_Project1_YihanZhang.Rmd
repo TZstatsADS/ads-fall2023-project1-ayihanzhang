@@ -36,7 +36,9 @@ df<-merged_df%>%select(cleaned_hm, parenthood)
 parenthood_table <- table(df$parenthood)
 barplot(parenthood_table, main="Distribution about parenthood categories", xlab="Categories", ylab="Freq")
 ```
-Before diving into the data, first we can observe the distribution of data that we are interested in. From the above bar plot, we can observe that there are more people do not have any child, the number of people in this group is about 60,000. By contrast, the number of people who do have one or more children are approximately 40,000. In addition, there exist a part of people who did not indicated their parenthood status when collecting the data.
+Before diving into the data, first we can observe the distribution of data that we are interested in. From the above bar plot, we can observe that there are more people do not have any child (represented by the column n). The number of people in this group is about 60,000. By contrast, the number of people who do have one or more children are approximately 40,000. 
+
+In addition, there exist a part of people who did not indicated their parenthood status when collecting the data.
 
 
 ```{r}
@@ -130,5 +132,5 @@ save.image('/Users/fiona/Documents/GitHub/ads-fall2023-project1-ayihanzhang/figs
 ```
 ### Conclusion
 
-For people who are parent, we cna see that the clusters between happiness and shopping are distinct, which means the relationship between their happiness and potential activities of shopping are not strong. Moreover, based on the distance between two clusters in the non-parent group, we can also conclude that the correlation between happiness and possible actions of shopping is low.
+For people who are parent, we can see that the clusters between happiness and shopping are distinct, which means the relationship between their happiness and potential activities of shopping are not strong. Moreover, based on the distance between two clusters in the non-parent group, we can also conclude that the correlation between happiness and possible actions of shopping is low.
 
