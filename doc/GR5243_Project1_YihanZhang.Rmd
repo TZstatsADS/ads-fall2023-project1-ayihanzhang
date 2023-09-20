@@ -32,12 +32,37 @@ df<-merged_df%>%select(cleaned_hm, parenthood)
 
 ### Topic of Project
 #### Impact of shopping on happiness among different parenthood categories.
-```{r include=FALSE, echo=FALSE}
-# Convert all characters into lower cases
-lower_text<-tolower(df$cleaned_hm)
+```{r echo=FALSE}
+parenthood_table <- table(df$parenthood)
+barplot(parenthood_table, main="Distribution about parenthood categories", xlab="Categories", ylab="Freq")
+```
+Before diving into the data, first we can observe the distribution of data that we are interested in. From the above bar plot, we can observe that there are more people do not have any child, the number of people in this group is about 60,000. By contrast, the number of people who do have one or more children are approximately 40,000. In addition, there exist a part of people who did not indicated their parenthood status when collecting the data.
+
+
+```{r}
+data_df <- data.frame(sentences = df$cleaned_hm)
+
+# Convert the dataframe to a single character vector
+text <- tolower(paste(data_df$sentences, collapse = " "))
+
+# Tokenize the text into words
+words <- unlist(strsplit(text, split = "\\W+"))
+
+# Count the frequency
+word_freq <- table(words)
+
+# Display
+print(sort(word_freq, decreasing = TRUE))
 ```
 
 
+```{r}
+library(wordcloud)
+# Using the word_freq data
+wordcloud(words = words, freq = word_freq, min.freq = 1,
+          max.words=200, random.order=FALSE, colors=brewer.pal(8, "Dark2"))
+```
+This graph shows the most sequenced words in the database by using word cloud. The larger the size of vocabularie in the graph means that the word appeared more times than other words. Thus, from the graph we can notice that the most common words are "vacation," "jacket", "was", "that," etc. The words such as "was" and "that" is meaningless in solving our problem about impact of shopping on happiness among different parenthood categories. Therefore, We need to further apply filtering before applying word2vec model.
 
 ### Analysis Processes (Parenthood)
 We can use word2vec model in the Nature Language Processing to analyze the contents of different text based on their potential theme. To use word2vec model, according to Claire's tutorial, we need to lemmatize the cleaned_hm text with regard to speech tag of each word (verb, adverb, noun, adjective). The detailed process can be refer to the process_data function in tutorial by Claire He.
